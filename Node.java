@@ -5,7 +5,7 @@ import java.util.ArrayList;
 /**usage:
  * For running master:
  *  java Node master IP PORT NUMBER_OF_NODES
- * Or:
+ * Otherwise:
  *  java Node IP PORT Master_IP Master_PORT
  */
 public class Node extends Thread {
