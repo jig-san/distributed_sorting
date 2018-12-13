@@ -59,20 +59,57 @@ public class Node extends Thread {
 
     private static void runMaster() {}
 
+    private static BigInteger getSpanSize(int nodeNumber) {
+        return BigInteger.valueOf(2).pow(80).divide(BigInteger.valueOf(nodeNumber));
+    }
+
+    private ArrayList<Socket> createSockets(ArrayList<ArrayList<String>> networkSockets) throws IOException {
+        ArrayList<Socket> nodeSockets= new ArrayList<>();
+        for (ArrayList<String> nodeAddress : networkSockets) {
+            if (!nodeAddress.get(0).equals(this.getIpAddr())) {
+                Socket nodeSocket = new Socket(nodeAddress.get(0), Integer.parseInt(nodeAddress.get(1)));
+                nodeSockets.add(nodeSocket);
+            } else {
+                nodeSockets.add(null);
+            }
+        }
+        return nodeSockets;
+    }
+
+    private static ArrayList<DataOutputStream> createOutputStreams(ArrayList<Socket> sockets) throws IOException {
+        ArrayList<DataOutputStream> result = new ArrayList<>();
+        for (Socket sock : sockets) {
+            if (sock != null) {
+                DataOutputStream stream = new DataOutputStream(sock.getOutputStream());
+                result.add(stream);
+            } else {
+                result.add(null);
+            }
+
+        }
+        return result;
+    }
+
     public static void main(String[] args) throws Exception {
         System.out.println(args[0] + args[1]);
         if (args[0].equals("master")) {
             Master master = new Master(args[1], Integer.parseInt(args[2]));
             master.run(Integer.parseInt(args[3]));
         } else {
+            // Create a new processing node
             Node node = new Node(args[0], Integer.parseInt(args[1]));
             System.out.println("Running Node: " + node.getIpAddr() + " " + node.getPort());
+            // Communicate with Master node to obtain other node addresses
             node.exchangeSockets(args[2], Integer.parseInt(args[3]));
-            int nodeNumber = node.getNetworkSockets().size();
-            BigInteger spanSize = BigInteger.valueOf(2).pow(80).divide(BigInteger.valueOf(nodeNumber));
+            // Calculate key range for each node
+            BigInteger spanSize = getSpanSize(node.getNetworkSockets().size());
+            // Create a new socket connection with each node
+            ArrayList<Socket> nodeSockets = node.createSockets(node.getNetworkSockets());
+            // Create data output stream for each socket
+            ArrayList<DataOutputStream> nodeStreams = createOutputStreams(nodeSockets);
             /** FOR GETTING DATA:
              *  insert here code that will use getNetworkSockets()
-             */
+             **/
             File file = new File(args[4]);
             try (RandomAccessFile data = new RandomAccessFile(file, "r")) {
                 byte[] key = new byte[10];
@@ -83,6 +120,7 @@ public class Node extends Thread {
 
                     //if key is in x range, send it to x socket
                     int nodeIndex = new BigInteger(1, key).divide(spanSize).intValue();
+
                 }
             }
             try {
