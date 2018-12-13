@@ -1,4 +1,5 @@
 import java.io.*;
+import java.math.BigInteger;
 import java.net.*;
 import java.util.ArrayList;
 
@@ -6,7 +7,7 @@ import java.util.ArrayList;
  * For running master:
  *  java Node master IP PORT NUMBER_OF_NODES
  * Otherwise:
- *  java Node IP PORT Master_IP Master_PORT
+ *  java Node IP PORT Master_IP Master_PORT inputfile
  */
 public class Node extends Thread {
     private ServerSocket serverSocket;
@@ -67,9 +68,23 @@ public class Node extends Thread {
             Node node = new Node(args[0], Integer.parseInt(args[1]));
             System.out.println("Running Node: " + node.getIpAddr() + " " + node.getPort());
             node.exchangeSockets(args[2], Integer.parseInt(args[3]));
+            int nodeNumber = node.getNetworkSockets().size();
+            BigInteger spanSize = BigInteger.valueOf(2).pow(80).divide(BigInteger.valueOf(nodeNumber));
             /** FOR GETTING DATA:
              *  insert here code that will use getNetworkSockets()
              */
+            File file = new File(args[4]);
+            try (RandomAccessFile data = new RandomAccessFile(file, "r")) {
+                byte[] key = new byte[10];
+                byte[] value = new byte[90];
+                for (long i = 0, len=data.length()/100; i < len; i++) {
+                    data.readFully(key);
+                    data.readFully(value);
+
+                    //if key is in x range, send it to x socket
+                    int nodeIndex = new BigInteger(1, key).divide(spanSize).intValue();
+                }
+            }
             try {
                 while (true) {
                     /** FOR SORTING:
