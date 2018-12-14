@@ -2,6 +2,7 @@ import java.io.*;
 import java.math.BigInteger;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 /**usage:
  * For running master:
@@ -112,15 +113,13 @@ public class Node extends Thread {
              **/
             File file = new File(args[4]);
             try (RandomAccessFile data = new RandomAccessFile(file, "r")) {
-                byte[] key = new byte[10];
-                byte[] value = new byte[90];
+                byte[] record = new byte[100];
+                int nodeIndex;
                 for (long i = 0, len=data.length()/100; i < len; i++) {
-                    data.readFully(key);
-                    data.readFully(value);
-
+                    data.readFully(record);
                     //if key is in x range, send it to x socket
-                    int nodeIndex = new BigInteger(1, key).divide(spanSize).intValue();
-
+                    nodeIndex = new BigInteger(1, Arrays.copyOfRange(record, 0, 9)).divide(spanSize).intValue();
+                    nodeStreams.get(nodeIndex).write(record);
                 }
             }
             try {
