@@ -64,19 +64,29 @@ public class Node extends Thread {
         return BigInteger.valueOf(2).pow(80).divide(BigInteger.valueOf(nodeNumber));
     }
 
+    /**
+     * Method for creating sockets to each processing node
+     *
+     */
     private ArrayList<Socket> createSockets(ArrayList<ArrayList<String>> networkSockets) throws IOException {
         ArrayList<Socket> nodeSockets= new ArrayList<>();
         for (ArrayList<String> nodeAddress : networkSockets) {
+            // check if the ip address is the address of current node
             if (!nodeAddress.get(0).equals(this.getIpAddr())) {
+                // if the ip address is not equal to the current ip address create a new socket and add it to socket array list
                 Socket nodeSocket = new Socket(nodeAddress.get(0), Integer.parseInt(nodeAddress.get(1)));
                 nodeSockets.add(nodeSocket);
             } else {
+                // if the ip address is equal to the current ip address, add null value to keep correct index of the nodes
                 nodeSockets.add(null);
             }
         }
         return nodeSockets;
     }
 
+    /**
+     * Create output stream to each created socket
+     */
     private static ArrayList<DataOutputStream> createOutputStreams(ArrayList<Socket> sockets) throws IOException {
         ArrayList<DataOutputStream> result = new ArrayList<>();
         for (Socket sock : sockets) {
@@ -86,7 +96,6 @@ public class Node extends Thread {
             } else {
                 result.add(null);
             }
-
         }
         return result;
     }
@@ -119,7 +128,12 @@ public class Node extends Thread {
                     data.readFully(record);
                     //if key is in x range, send it to x socket
                     nodeIndex = new BigInteger(1, Arrays.copyOfRange(record, 0, 9)).divide(spanSize).intValue();
-                    nodeStreams.get(nodeIndex).write(record);
+                    DataOutputStream stream = nodeStreams.get(nodeIndex);
+                    if (stream == null) {
+
+                    } else {
+                        stream.write(record);
+                    }
                 }
             }
             try {
