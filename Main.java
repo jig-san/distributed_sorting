@@ -6,18 +6,18 @@ public class Main {
 
     private static final int DEFAULT_KEY_SIZE = 10;
     private static final int DEFAULT_RECORD_SIZE = 90;
-    public static final int DEFAULT_MAX_TMP_FILES = 512;
+    private static final int DEFAULT_MAX_TMP_FILES = 512;
 
+    // http://stackoverflow.com/questions/12807797/java-get-available-memory
     private static long estimateAvailableMemory() {
         System.gc();
-        // http://stackoverflow.com/questions/12807797/java-get-available-memory
         Runtime r = Runtime.getRuntime();
         long allocatedMemory = r.totalMemory() - r.freeMemory();
         return r.maxMemory() - allocatedMemory;
     }
 
-    public static long estimateBestSizeOfBlocks(final long sizeoffile,
-                                                final int maxtmpfiles, final long maxMemory) {
+    private static long estimateBestSizeOfBlocks(final long sizeoffile,
+                                                 final int maxtmpfiles, final long maxMemory) {
         long blocksize = sizeoffile / maxtmpfiles
                 + (sizeoffile % maxtmpfiles == 0 ? 0 : 1);
 
@@ -27,35 +27,6 @@ public class Main {
         return blocksize;
     }
 
-
-    public static Comparator<KeyLocationTuple> defaultKeyLocationComparator = new Comparator<KeyLocationTuple>() {
-        @Override
-        public int compare(KeyLocationTuple left, KeyLocationTuple right) {
-            for (int i = 0, j = 0; i < left.key.length && j < right.key.length; i++, j++) {
-                int a = (left.key[i] & 0xff);
-                int b = (right.key[j] & 0xff);
-                if (a != b) {
-                    return a - b;
-                }
-            }
-            return left.key.length - right.key.length;
-        }
-    };
-
-    public static Comparator<byte[]> defaultByteArrayComparator = new Comparator<byte[]>() {
-        @Override
-        public int compare(byte[] left, byte[] right) {
-            for (int i = 0, j = 0; i < left.length && j < right.length; i++, j++) {
-                int a = (left[i] & 0xff);
-                int b = (right[j] & 0xff);
-                if (a != b) {
-                    return a - b;
-                }
-            }
-            return left.length - right.length;
-        }
-    };
-
     public static void main(String[] args) throws IOException {
         executeSort("testfile.crc.1G","sorted.file.out");
     }
@@ -64,16 +35,16 @@ public class Main {
         System.out.printf("Running external sorting with files: [%s] -> [%s]\n", inputFileName, outputFileName);
         List<File> l = sortFile(
                 new File(inputFileName),
-                defaultKeyLocationComparator,
+                SortingComparators.defaultKeyLocationComparator,
                 DEFAULT_MAX_TMP_FILES,
                 new File("output")
         );
         System.out.printf("Merging of temporary files started.\n");
-        System.out.printf("Merged and sorted files to [%d] rows.\n", mergeSortedFiles(l, new File(outputFileName), defaultByteArrayComparator));
+        System.out.printf("Merged and sorted files to [%d] rows.\n", mergeSortedFiles(l, new File(outputFileName), SortingComparators.defaultBinaryFileBufferComparator));
     }
 
 
-    public static List<File> sortFile(File file, Comparator<KeyLocationTuple> cmp, int maxTmpFiles, File tmpDirectory)
+    private static List<File> sortFile(File file, Comparator<KeyLocationTuple> cmp, int maxTmpFiles, File tmpDirectory)
             throws IOException {
         FileInputStream is = new FileInputStream(file);
 
@@ -86,7 +57,7 @@ public class Main {
 
         List<KeyLocationTuple> tmplist = new ArrayList<>();
 
-        long recordInMemSize = KeyLocationTuple.EstimateSize();
+        long recordInMemSize = KeyLocationTuple.EstimateSize(DEFAULT_KEY_SIZE);
         System.out.printf("Splitting and sorting started:\n" +
                 "Max numbers of blocks [%d]\n" +
                 "Max size per block [%d] bytes\n" +
@@ -121,8 +92,8 @@ public class Main {
 
     }
 
-    public static File sortAndSave(List<KeyLocationTuple> tmplist,
-                                   Comparator<KeyLocationTuple> cmp, File tmpdirectory, FileInputStream is) throws IOException {
+    private static File sortAndSave(List<KeyLocationTuple> tmplist,
+                                    Comparator<KeyLocationTuple> cmp, File tmpdirectory, FileInputStream is) throws IOException {
         //tmplist.sort(cmp);
         tmplist = tmplist.parallelStream().sorted(cmp).collect(Collectors.toCollection(ArrayList::new));
         File newtmpfile = File.createTempFile("tmp_sort_",
@@ -149,8 +120,8 @@ public class Main {
         return newtmpfile;
     }
 
-    public static long mergeSortedFiles(List<File> files, File outputfile,
-                                        final Comparator<byte[]> cmp) throws IOException {
+    private static long mergeSortedFiles(List<File> files, File outputfile,
+                                         final Comparator<BinaryFileBuffer> cmp) throws IOException {
         ArrayList<BinaryFileBuffer> bfbs = new ArrayList<>();
         for (File f : files) {
             BinaryFileBuffer bfb = new BinaryFileBuffer(new FileInputStream(f), DEFAULT_KEY_SIZE, DEFAULT_RECORD_SIZE);
@@ -160,18 +131,11 @@ public class Main {
         return mergeSortedFiles(new FileOutputStream(outputfile), cmp, bfbs);
     }
 
-    public static long mergeSortedFiles(FileOutputStream outputStream,
-                                        final Comparator<byte[]> cmp,
-                                        List<BinaryFileBuffer> buffers) throws IOException {
+    private static long mergeSortedFiles(FileOutputStream outputStream,
+                                         final Comparator<BinaryFileBuffer> cmp,
+                                         List<BinaryFileBuffer> buffers) throws IOException {
 
-        PriorityQueue<BinaryFileBuffer> pq = new PriorityQueue<>(
-                11, new Comparator<BinaryFileBuffer>() {
-            @Override
-            public int compare(BinaryFileBuffer i,
-                               BinaryFileBuffer j) {
-                return cmp.compare(i.peekRecordKey(), j.peekRecordKey());
-            }
-        });
+        PriorityQueue<BinaryFileBuffer> pq = new PriorityQueue<>(11, cmp);
 
         for (BinaryFileBuffer bfb : buffers) {
             if (!bfb.empty()) {

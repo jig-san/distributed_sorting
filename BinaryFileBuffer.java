@@ -3,20 +3,27 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 /**
- * This is essentially a thin wrapper on top of a BufferedReader... which keeps
- * the last line in memory.
- *
+ * A wrapper on top of a BufferedReader that keeps the record in memory
  */
 public final class BinaryFileBuffer {
+    private FileInputStream is;
+    private byte[] data;
+    private byte[] key;
+    private int keyRecordSize;
+    private int dataRecordSize;
+    private ByteArrayOutputStream outputStream;
+
+
     public BinaryFileBuffer(FileInputStream is, int keyRecordSize, int dataRecordSize) throws IOException {
         this.is = is;
         this.key = new byte[keyRecordSize];
         this.data = new byte[dataRecordSize];
         this.keyRecordSize = keyRecordSize;
         this.dataRecordSize = dataRecordSize;
-        this.outputStream = new ByteArrayOutputStream( );
+        this.outputStream = new ByteArrayOutputStream();
         reload();
     }
+
     public void close() throws IOException {
         this.is.close();
     }
@@ -51,13 +58,4 @@ public final class BinaryFileBuffer {
         outputStream.write(this.key);
         outputStream.write(this.data);
     }
-
-    public FileInputStream is;
-
-    private byte[] data;
-    private byte[] key;
-    private int keyRecordSize;
-    private int dataRecordSize;
-    private ByteArrayOutputStream outputStream;
-
 }
