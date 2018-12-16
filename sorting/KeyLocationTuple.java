@@ -1,5 +1,10 @@
+package sorting;
+
 import java.util.Arrays;
 
+/**
+ * Helper class for sorting.
+ */
 public class KeyLocationTuple {
     public byte[] key;
     public long location;
@@ -12,7 +17,7 @@ public class KeyLocationTuple {
     public static long EstimateSize(int keySize) {
         if (keySize < 1) keySize = 0;
         boolean is64Bit = true;
-        String arch = System.getProperty("sun.arch.data.model");
+        String arch = System.getProperty("sun.arch.data.communication.model");
         if (arch != null) {
             if (arch.contains("32")) {
                 is64Bit = false;

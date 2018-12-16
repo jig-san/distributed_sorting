@@ -1,9 +1,11 @@
+package sorting;
+
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 
 /**
- * A wrapper on top of a BufferedReader that keeps the record in memory
+ * A wrapper on top of a BufferedReader that keeps the record in memory.
  */
 public final class BinaryFileBuffer {
     private FileInputStream is;

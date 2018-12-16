@@ -1,5 +1,10 @@
+package sorting;
+
 import java.util.Comparator;
 
+/**
+ * Helpers for sorting.
+ */
 public  class SortingComparators {
     private static final int UNSIGNED_MASK = 0xFF;
 

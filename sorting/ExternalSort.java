@@ -1,12 +1,32 @@
+package sorting;
+
+import util.Logger;
+
 import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * File sort util.
+ */
 public class ExternalSort {
 
     private static final int DEFAULT_KEY_SIZE = 10;
     private static final int DEFAULT_RECORD_SIZE = 90;
     private static final int DEFAULT_MAX_TMP_FILES = 512;
+
+    private static File getTmpDirectory() {
+        File tmpDir = new File("output");
+        if (!tmpDir.isDirectory()) {
+            if (tmpDir.exists()) {
+                throw new IllegalStateException("output is a file, but must be a directory");
+            }
+            if (!tmpDir.mkdir()) {
+                throw new IllegalStateException("could not create output directory");
+            }
+        }
+        return tmpDir;
+    }
 
     // http://stackoverflow.com/questions/12807797/java-get-available-memory
     private static long estimateAvailableMemory() {
@@ -28,15 +48,17 @@ public class ExternalSort {
     }
 
     public static void executeSort(String inputFileName, String outputFileName) throws IOException {
-        System.out.printf("Running external sorting with files: [%s] -> [%s]\n", inputFileName, outputFileName);
-        List<File> l = sortFile(
+        Logger.log("Running external sorting with files: [%s] -> [%s]\n", inputFileName, outputFileName);
+
+        List<File> filesForMerge = sortFile(
                 new File(inputFileName),
                 SortingComparators.defaultKeyLocationComparator,
                 DEFAULT_MAX_TMP_FILES,
-                new File("output")
+                getTmpDirectory()
         );
-        System.out.printf("Merging of temporary files started.\n");
-        System.out.printf("Merged and sorted files to [%d] rows.\n", mergeSortedFiles(l, new File(outputFileName), SortingComparators.defaultBinaryFileBufferComparator));
+        Logger.log("Merging of temporary files started.\n");
+        long result = mergeSortedFiles(filesForMerge, new File(outputFileName), SortingComparators.defaultBinaryFileBufferComparator);
+        Logger.log("Merged and sorted files to [%d] rows.\n", result);
     }
 
 
@@ -46,7 +68,6 @@ public class ExternalSort {
 
         final long datalength = file.length();
 
-
         List<File> files = new ArrayList<>();
         long blocksize = estimateBestSizeOfBlocks(datalength,
                 maxTmpFiles, estimateAvailableMemory());
@@ -54,7 +75,7 @@ public class ExternalSort {
         List<KeyLocationTuple> tmplist = new ArrayList<>();
 
         long recordInMemSize = KeyLocationTuple.EstimateSize(DEFAULT_KEY_SIZE);
-        System.out.printf("Splitting and sorting started:\n" +
+        Logger.log("Splitting and sorting started:\n" +
                 "Max numbers of blocks [%d]\n" +
                 "Max size per block [%d] bytes\n" +
                 "Size per record [%d] bytes\n", maxTmpFiles, blocksize, recordInMemSize);
@@ -70,6 +91,7 @@ public class ExternalSort {
                     KeyLocationTuple klt = new KeyLocationTuple(data, currentOffset);
                     tmplist.add(klt);
                     currentOffset += DEFAULT_RECORD_SIZE;
+                    //noinspection ResultOfMethodCallIgnored
                     is.skip(DEFAULT_RECORD_SIZE);
                     currentblocksize += recordInMemSize;
                 }
@@ -90,7 +112,6 @@ public class ExternalSort {
 
     private static File sortAndSave(List<KeyLocationTuple> tmplist,
                                     Comparator<KeyLocationTuple> cmp, File tmpdirectory, FileInputStream is) throws IOException {
-        //tmplist.sort(cmp);
         tmplist = tmplist.parallelStream().sorted(cmp).collect(Collectors.toCollection(ArrayList::new));
         File newtmpfile = File.createTempFile("tmp_sort_",
                 "", tmpdirectory);
@@ -98,7 +119,7 @@ public class ExternalSort {
 
         try (FileOutputStream stream = new FileOutputStream(newtmpfile)) {
             byte[] record = new byte[DEFAULT_RECORD_SIZE];
-            int bytesRead = 0;
+            int bytesRead;
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
             for (KeyLocationTuple kl : tmplist) {
                 outputStream.write(kl.key);
