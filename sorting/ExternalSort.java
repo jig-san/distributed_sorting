@@ -106,6 +106,8 @@ public class ExternalSort {
             }
         }
 
+        is.close();
+
         return files;
 
     }

@@ -16,6 +16,7 @@ public class Dispatcher extends Worker {
     private final String inputFile;
     private final String outputFile;
     private final String tmpOutputFile;
+    private BigInteger spanSize;
     private BufferedOutputStream outputStream;
 
     static Master getMaster(NodeAddress masterAddress, int nodesCount) {
@@ -60,18 +61,21 @@ public class Dispatcher extends Worker {
         } catch (FileNotFoundException e) {
             throw new IllegalStateException("Failed to create output file", e);
         }
+        spanSize = getSpanSize(getSockets().size());
+    }
+
+    private int getNodeIndexForRecord(byte[] record) {
+        return new BigInteger(1, Arrays.copyOfRange(record, 0, 10)).divide(spanSize).intValue();
     }
 
     @Override
     protected void process() {
-        BigInteger spanSize = getSpanSize(getSockets().size());
         File file = new File(inputFile);
         try (RandomAccessFile data = new RandomAccessFile(file, "r")) {
             for (long i = 0, len=data.length()/100; i < len; i++) {
                 byte[] record = new byte[100];
                 data.readFully(record);
-                //if key is in x range, send it to x socket
-                int nodeIndex = new BigInteger(1, Arrays.copyOfRange(record, 0, 10)).divide(spanSize).intValue();
+                int nodeIndex = getNodeIndexForRecord(record);
                 DuplexSocket socket = getSockets().get(nodeIndex);
                 if (socket != null) {
                     processAlienRecord(socket, record);
@@ -98,7 +102,7 @@ public class Dispatcher extends Worker {
         try {
             outputStream.close();
         } catch (IOException e) {
-            // Does not matter anymore
+            // Does not matter anymore.
         }
         try {
             ExternalSort.executeSort(tmpOutputFile, outputFile);

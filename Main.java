@@ -6,7 +6,7 @@ import communication.model.NodeAddress;
  * Usage:
  * %app% own.ip.address ownport master nodes_count
  * or
- * %app% own.ip.address ownport master.ip.address masterport input/file/path
+ * %app% own.ip.address ownport master.ip.address masterport input/file/path output/file/path
  */
 public class Main {
     public static void main(String[] args) {
@@ -15,9 +15,9 @@ public class Main {
             int nodesCount = Integer.parseInt(args[3]);
             Dispatcher.getMaster(ownAddress, nodesCount).run();
         } else {
-            NodeAddress masterAddress = new NodeAddress(args[3], Integer.parseInt(args[4]));
-            String inputFile = args[5];
-            String outputFile = args[6];
+            NodeAddress masterAddress = new NodeAddress(args[2], Integer.parseInt(args[3]));
+            String inputFile = args[4];
+            String outputFile = args[5];
             Dispatcher.getWorker(ownAddress, masterAddress, inputFile, outputFile).run();
         }
     }
