@@ -9,11 +9,17 @@ public class NodeData implements Serializable {
     private final NodeAddress nodeAddress;
     private final boolean isReceiverNode;
     private final boolean isProducerNode;
+    private final int nodeIndex;
 
-    public NodeData(NodeAddress address, boolean isReceiverNode, boolean isProducerNode) {
+    public NodeData(NodeAddress address, int nodeIndex, boolean isReceiverNode, boolean isProducerNode) {
         this.nodeAddress = address;
+        this.nodeIndex = nodeIndex;
         this.isReceiverNode = isReceiverNode;
         this.isProducerNode = isProducerNode;
+    }
+
+    public int getNodeIndex() {
+        return nodeIndex;
     }
 
     public NodeAddress getAddress() {

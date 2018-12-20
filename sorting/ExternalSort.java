@@ -15,13 +15,13 @@ public class ExternalSort {
     private static final int DEFAULT_RECORD_SIZE = 90;
     private static final int DEFAULT_MAX_TMP_FILES = 512;
 
-    private static File getTmpDirectory() {
-        File tmpDir = new File("output");
+    private static File getTmpDirectory(String tmpDirName) {
+        File tmpDir = new File(tmpDirName);
         if (!tmpDir.isDirectory()) {
             if (tmpDir.exists()) {
                 throw new IllegalStateException("output is a file, but must be a directory");
             }
-            if (!tmpDir.mkdir()) {
+            if (!tmpDir.mkdirs()) {
                 throw new IllegalStateException("could not create output directory");
             }
         }
@@ -47,14 +47,14 @@ public class ExternalSort {
         return blocksize;
     }
 
-    public static void executeSort(String inputFileName, String outputFileName) throws IOException {
+    public static void executeSort(String inputFileName, String outputFileName, String tmpDirName) throws IOException {
         Logger.log("Running external sorting with files: [%s] -> [%s]\n", inputFileName, outputFileName);
 
         List<File> filesForMerge = sortFile(
                 new File(inputFileName),
                 SortingComparators.defaultKeyLocationComparator,
                 DEFAULT_MAX_TMP_FILES,
-                getTmpDirectory()
+                getTmpDirectory(tmpDirName)
         );
         Logger.log("Merging of temporary files started.\n");
         long result = mergeSortedFiles(filesForMerge, new File(outputFileName), SortingComparators.defaultBinaryFileBufferComparator);

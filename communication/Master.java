@@ -2,6 +2,7 @@ package communication;
 
 import communication.model.NodeAddress;
 import communication.model.NodeData;
+import util.Arrayer;
 import util.DuplexSocket;
 import util.Logger;
 
@@ -9,18 +10,20 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 /**
- * This is a node, that servers as a registry of all nodes.
- * Pass its address in port to every node, so that they can exchange
+ * This is a node, that serves as a registry of all worker nodes.
+ * Pass its address and port to every node, so that they can exchange
  * addresses with this service.
  */
 public class Master extends Node {
-    private final ArrayList<NodeAddress> nodes = new ArrayList<>();
-    private final ArrayList<DuplexSocket> sockets = new ArrayList<>();
+    private final ArrayList<NodeAddress> nodes;
+    private final ArrayList<DuplexSocket> sockets;
     private final int nodesCount;
 
     public Master(NodeAddress ownAddress, int nodesCount) {
         super(ownAddress);
         this.nodesCount = nodesCount;
+        nodes = Arrayer.createEmptyArray(nodesCount);
+        sockets = Arrayer.createEmptyArray(nodesCount);
     }
 
     private void listenForNode() {
@@ -29,9 +32,9 @@ public class Master extends Node {
             Logger.log("Connection accepted from node IP %s", client.getIpAddr());
             NodeData nodeData = client.receive(NodeData.class);
             if (nodeData.isReceiverNode()) {
-                this.nodes.add(nodeData.getAddress());
+                this.nodes.set(nodeData.getNodeIndex(), nodeData.getAddress());
             }
-            this.sockets.add(client);
+            this.sockets.set(nodeData.getNodeIndex(), client);
             Logger.log("Saved node %s, total", nodeData, this.nodes.size());
         } catch (IOException e) {
             throw new IllegalStateException("Failed to accept node connection", e);

@@ -10,31 +10,17 @@ public class Tester {
         return new NodeAddress("127.0.0.1", port);
     }
 
-    private static void delay() {
-        try {
-            TimeUnit.MILLISECONDS.sleep(100);
-        } catch (InterruptedException e) {
-            //
-        }
+    private static void runWorker(int i) {
+        new Thread(() -> Dispatcher.getWorker(
+                selfAddr(9001 + i), i, selfAddr(8001),
+                "uns" + i, "s" + i).run()).start();
     }
 
     public static void main(String[] args) {
-        new Thread(() -> Dispatcher.getMaster(selfAddr(8001), 4).run()).start();
-        delay();
-        new Thread(() -> Dispatcher.getWorker(
-                selfAddr(9001), selfAddr(8001),
-                "uns0", "s0").run()).start();
-        delay();
-        new Thread(() -> Dispatcher.getWorker(
-                selfAddr(9002), selfAddr(8001),
-                "uns1", "s1").run()).start();
-        delay();
-        new Thread(() -> Dispatcher.getWorker(
-                selfAddr(9003), selfAddr(8001),
-                "uns2", "s2").run()).start();
-        delay();
-        new Thread(() -> Dispatcher.getWorker(
-                selfAddr(9004), selfAddr(8001),
-                "uns3", "s3").run()).start();
+        int numWorkers = 4;
+        new Thread(() -> Dispatcher.getMaster(selfAddr(8001), numWorkers).run()).start();
+        for (int i = 0; i < numWorkers; i++) {
+            runWorker(i);
+        }
     }
 }

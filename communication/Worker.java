@@ -2,6 +2,7 @@ package communication;
 
 import communication.model.NodeAddress;
 import communication.model.NodeData;
+import util.Arrayer;
 import util.DuplexSocket;
 import util.Logger;
 import util.Socketer;
@@ -15,11 +16,13 @@ import java.util.ArrayList;
  */
 abstract public class Worker extends Node {
     private ArrayList<NodeAddress> nodes;
-    private final ArrayList<DuplexSocket> nodeSockets = new ArrayList<>();
+    private ArrayList<DuplexSocket> nodeSockets;
     private final DuplexSocket masterSocket;
+    private final int ownNodeIndex;
 
-    public Worker(NodeAddress ownAddress, NodeAddress masterAddress) {
+    public Worker(NodeAddress ownAddress, int ownNodeIndex, NodeAddress masterAddress) {
         super(ownAddress);
+        this.ownNodeIndex = ownNodeIndex;
         try {
             this.masterSocket = Socketer.client(masterAddress);
         } catch (IOException e) {
@@ -31,11 +34,15 @@ abstract public class Worker extends Node {
         return this.nodeSockets;
     }
 
+    protected int getOwnNodeIndex() {
+        return ownNodeIndex;
+    }
+
     @SuppressWarnings("unchecked")
     private void exchangeSockets() {
         try {
             Logger.log("Sending address to master");
-            masterSocket.send(new NodeData(getOwnAddress(), isReveiverNode(), isProducerNode()));
+            masterSocket.send(new NodeData(getOwnAddress(), getOwnNodeIndex(), isReveiverNode(), isProducerNode()));
             Logger.log("Address send to master");
             this.nodes = masterSocket.receive(ArrayList.class);
             Logger.log("Received object from master: %s", this.nodes);
@@ -74,21 +81,30 @@ abstract public class Worker extends Node {
     abstract protected void postProcess();
 
     private void createSockets() {
+        nodeSockets = Arrayer.createEmptyArray(nodes.size());
         try {
             boolean pastSelf = false;
-            for (NodeAddress node : nodes) {
+            for (int i = 0; i < nodes.size(); i++) {
+                NodeAddress node = nodes.get(i);
                 if (node.equals(getOwnAddress())) {
+                    if (ownNodeIndex != i) {
+                        throw new IllegalStateException("Node has wrong position of itself, faulty master");
+                    }
                     pastSelf = true;
-                    nodeSockets.add(null);
+                    nodeSockets.set(i, null);
                     continue;
                 }
                 if (pastSelf) {
                     Logger.log("Opening socket with %s", node);
-                    nodeSockets.add(Socketer.client(node));
+                    DuplexSocket socket = Socketer.client(node);
+                    nodeSockets.set(i, socket);
+                    socket.send(getOwnAddress());
                     Logger.log("Opened socket with %s", node);
                 } else {
-                    Logger.log("Waiting for socket from %s", node);
-                    nodeSockets.add(acceptClient());
+                    Logger.log("Waiting for socket from a node", node);
+                    DuplexSocket socket = acceptClient();
+                    int nodeIndex = nodes.indexOf(socket.receive(NodeAddress.class));
+                    nodeSockets.set(nodeIndex, socket);
                     Logger.log("Got socket from %s", node);
                 }
             }

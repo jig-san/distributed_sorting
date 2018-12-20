@@ -23,12 +23,12 @@ public class Dispatcher extends Worker {
         return new Master(masterAddress, nodesCount);
     }
 
-    static Dispatcher getWorker(NodeAddress ownAddress, NodeAddress masterAddress, String inputFile, String outputFile) {
-        return new Dispatcher(ownAddress, masterAddress, inputFile, outputFile);
+    static Dispatcher getWorker(NodeAddress ownAddress, int ownIndex, NodeAddress masterAddress, String inputFile, String outputFile) {
+        return new Dispatcher(ownAddress, ownIndex, masterAddress, inputFile, outputFile);
     }
 
-    private Dispatcher(NodeAddress ownAddress, NodeAddress masterAddress, String inputFile, String outputFile) {
-        super(ownAddress, masterAddress);
+    private Dispatcher(NodeAddress ownAddress, int ownNodeIndex, NodeAddress masterAddress, String inputFile, String outputFile) {
+        super(ownAddress, ownNodeIndex, masterAddress);
         this.inputFile = inputFile;
         this.outputFile = outputFile;
         this.tmpOutputFile = outputFile != null ? outputFile + ".tmp" : null;
@@ -105,7 +105,7 @@ public class Dispatcher extends Worker {
             // Does not matter anymore.
         }
         try {
-            ExternalSort.executeSort(tmpOutputFile, outputFile);
+            ExternalSort.executeSort(tmpOutputFile, outputFile, String.format("output/worker%d", getOwnNodeIndex()));
         } catch (IOException e) {
             throw new IllegalStateException("Failed to sort", e);
         }
