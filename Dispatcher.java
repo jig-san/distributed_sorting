@@ -72,8 +72,8 @@ public class Dispatcher extends Worker {
     protected void process() {
         File file = new File(inputFile);
         try (RandomAccessFile data = new RandomAccessFile(file, "r")) {
+            byte[] record = new byte[100];
             for (long i = 0, len=data.length()/100; i < len; i++) {
-                byte[] record = new byte[100];
                 data.readFully(record);
                 int nodeIndex = getNodeIndexForRecord(record);
                 DuplexSocket socket = getSockets().get(nodeIndex);
