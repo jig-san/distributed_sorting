@@ -6,6 +6,11 @@ A distributed sorting application that processes records from the sortbenchmark.
 initial data, sending and receiving data between processing nodes, and sorting and merging.
 
 
-Steps to run: 
-
-1. 
+ Usage:
+ ```
+ %app% own.ip.address ownport master nodes_count
+ 
+ or
+ 
+ %app% own.ip.address ownport master.ip.address masterport input/file/path
+```
